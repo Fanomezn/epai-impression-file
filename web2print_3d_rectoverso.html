@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web-to-Print AI - Éditeur Pro Recto/Verso &amp; 3D</title>
+
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            --primary: #007bc0;
+            --primary-hover: #006096;
+            --secondary: #595959;
+            --accent: #8b7b65;
+            --dark: #222222;
+            --black: #000000;
+            --white: #ffffff;
+            --bg-body: #f8fafc;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --radius-lg: 16px;
+            --radius-md: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            /* Optionnel : améliore le rendu du texte sur les écrans */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: var(--bg-body);
+            color: var(--dark);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Top Minimalist Header & Sidebar Layout --- */
+        #sidebar {
+            width: 480px;
+            background-color: var(--white);
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.03);
+            z-index: 10;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .top-nav-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .top-nav-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.05rem;
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        .top-nav-title svg,
+        .top-nav-title span.emoji {
+            font-size: 1.2rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: #f1f5f9;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--secondary);
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+
+        #step-indicator {
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-weight: 600;
+            background: #eff6ff;
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid #bfdbfe;
+        }
+
+        /* --- White Card Steps --- */
+        .form-step {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            background: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s;
+        }
+
+        .form-step:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            color: var(--dark);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        input,
+        textarea,
+        select {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 10px 14px;
+            color: var(--black);
+            font-size: 12px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input[type="file"] {
+            padding: 8px;
+            cursor: pointer;
+            background: var(--white);
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 123, 192, 0.15);
+            background-color: var(--white);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .style-chip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .style-chip {
+            padding: 6px 12px;
+            background: #f1f5f9;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            color: var(--secondary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .style-chip:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #e0f2fe;
+        }
+
+        .style-chip.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--white);
+            box-shadow: 0 2px 6px rgba(0, 123, 192, 0.25);
+        }
+
+        #logo-preview-container {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin-top: 4px;
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+
+        #logo-preview-img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            border-radius: 6px;
+            background: var(--white);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-remove-logo {
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        #palette-container {
+            display: none;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .palette-swatches {
+            display: flex;
+            gap: 6px;
+            justify-content: space-between;
+        }
+
+        .swatch {
+            flex: 1;
+            height: 34px;
+            border-radius: 6px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 3px;
+            font-size: 0.55rem;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        #print-mode-banner {
+            display: none;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+            font-size: 0.78rem;
+            color: #1e40af;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* --- Modern Buttons & Action bar --- */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: auto;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        button.action-btn {
+            padding: 11px 16px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        button.action-btn:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 123, 192, 0.25);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary-action {
+            background-color: #f1f5f9;
+            color: var(--dark);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary-action:hover {
+            background-color: #e2e8f0;
+        }
+
+        .btn-success {
+            background-color: var(--accent);
+            color: white;
+            box-shadow: 0 4px 12px rgba(42, 175, 82, 0.25);
+        }
+
+        .btn-success:hover {
+            background-color: #239244;
+        }
+
+        /* --- 3D Viewport Area --- */
+        #main-content {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #334155 0%, #0f172a 100%);
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        #overlay-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 8px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 0.8rem;
+            color: var(--dark);
+            font-weight: 600;
+            pointer-events: none;
+            box-shadow: var(--shadow-md);
+        }
+
+        #debug-panel {
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #fca5a5;
+            border-radius: var(--radius-md);
+            padding: 10px 14px;
+            font-family: monospace;
+            font-size: 0.72rem;
+            color: #991b1b;
+            white-space: pre-wrap;
+            word-break: break-all;
+            z-index: 20;
+            box-shadow: var(--shadow-md);
+        }
+
+        #dimension-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 8px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 700;
+            pointer-events: none;
+            text-align: right;
+            box-shadow: var(--shadow-md);
+        }
+
+        #dimension-indicator .mode-line {
+            color: var(--secondary);
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-top: 1px;
+        }
+
+        #viewport-controls {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .control-cluster {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            align-items: center;
+        }
+
+        .zoom-cluster {
+            flex-direction: row;
+        }
+
+        .control-btn {
+            width: 36px;
+            height: 36px;
+            background: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--primary);
+            font-size: 1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background-color: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+
+        .face-toggle-floating {
+            display: flex;
+            gap: 4px;
+        }
+
+        .face-btn-float {
+            padding: 6px 12px;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            color: var(--secondary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .face-btn-float:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .face-btn-float.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--white);
+            box-shadow: 0 2px 6px rgba(0, 123, 192, 0.3);
+        }
+
+        .color-picker-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .color-picker-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .color-picker-item input[type="color"] {
+            width: 42px;
+            height: 34px;
+            padding: 2px;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--white);
+        }
+
+        .color-picker-item span {
+            font-size: 0.68rem;
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        .checkbox-inline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: var(--dark);
+            font-weight: 600;
+            margin-top: 4px;
+            cursor: pointer;
+        }
+
+        .checkbox-inline input {
+            width: auto;
+            accent-color: var(--primary);
+        }
+
+        #generation-progress {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+        }
+
+        .progress-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #1e40af;
+            font-weight: 700;
+        }
+
+        .progress-icon {
+            font-size: 0.95rem;
+            display: inline-block;
+            animation: progress-pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes progress-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 0.6;
+            }
+        }
+
+        #progress-timer {
+            margin-left: auto;
+            color: var(--primary);
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 6px;
+            background: #dbeafe;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 999px;
+            transition: width 0.25s linear;
+        }
+
+        .optional-hint {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--secondary);
+            text-transform: none;
+            letter-spacing: 0;
+            font-style: italic;
+        }
+
+        .content-hint {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--primary);
+            border-radius: var(--radius-md);
+            padding: 8px 12px;
+            font-size: 0.72rem;
+            color: var(--secondary);
+            line-height: 1.5;
+        }
+
+        .content-hint strong {
+            color: var(--dark);
+        }
+
+        .content-hint-tags {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        /* --- Editeur manuel (mode 2D overlay) --- */
+        #btn-edit-design {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            padding: 10px 18px;
+            background: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            color: var(--dark);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        #btn-edit-design:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        #btn-edit-design.active {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+
+        #edit-mode-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 30;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(2px);
+        }
+
+        #edit-mode-overlay.active {
+            display: block;
+        }
+
+        #edit-svg-host {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ffffff;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+            border-radius: 4px;
+            overflow: visible;
+            cursor: default;
+        }
+
+        #edit-svg-host svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #edit-svg-host .editable-el {
+            cursor: grab;
+        }
+
+        #edit-svg-host .editable-el:hover {
+            outline: 1.5px dashed var(--primary);
+            outline-offset: 2px;
+        }
+
+        #edit-svg-host .editable-el.dragging {
+            cursor: grabbing;
+        }
+
+        .edit-toolbar-fab {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 8px;
+            border-radius: 14px;
+            box-shadow: var(--shadow-md);
+            z-index: 35;
+        }
+
+        .edit-toolbar-fab button {
+            border: none;
+            background: #f1f5f9;
+            color: var(--dark);
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+
+        .edit-toolbar-fab button:hover {
+            background: #e2e8f0;
+        }
+
+        .edit-toolbar-fab button.danger {
+            color: #ef4444;
+        }
+
+        .edit-toolbar-fab button.danger:hover {
+            background: #fee2e2;
+        }
+
+        .edit-toolbar-fab button.primary-action {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .edit-toolbar-fab button.primary-action:hover {
+            background: var(--primary-hover);
+        }
+
+        .edit-toolbar-fab .toolbar-sep {
+            width: 1px;
+            height: 22px;
+            background: var(--border-color);
+            margin: 0 2px;
+        }
+
+        #edit-property-panel {
+            display: none;
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 35;
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(10px);
+            padding: 14px 18px;
+            border-radius: 14px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: flex-end;
+            gap: 14px;
+            flex-wrap: wrap;
+            max-width: 90%;
+        }
+
+        #edit-property-panel.visible {
+            display: flex;
+        }
+
+        .prop-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .prop-field label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--secondary);
+            font-weight: 700;
+        }
+
+        .prop-field input[type="text"] {
+            width: 160px;
+            font-size: 0.8rem;
+            padding: 7px 10px;
+        }
+
+        .prop-field input[type="number"] {
+            width: 70px;
+            font-size: 0.8rem;
+            padding: 7px 8px;
+        }
+
+        .prop-field input[type="color"] {
+            width: 38px;
+            height: 32px;
+            padding: 2px;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .selection-handle {
+            fill: var(--primary);
+            stroke: white;
+            stroke-width: 1.5;
+            cursor: nwse-resize;
+        }
+
+        #edit-hint {
+            position: absolute;
+            top: 68px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 32;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-align: center;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="sidebar">
+        <!-- Minimalist Top Bar -->
+        <div class="top-nav-bar">
+            <div class="top-nav-title">
+                <span class="emoji">🎨</span>
+                <span>Web-to-Print AI</span>
+            </div>
+            <div class="header-actions">
+                <div id="step-indicator">Étape <span id="current-step-num">1</span> / 5</div>
+                <button class="icon-btn" onclick="loadDefaultSVGs()" title="Réinitialiser">🔄</button>
+            </div>
+        </div>
+
+        <!-- ÉTAPE 1 -->
+        <div class="form-step" data-step="1">
+            <h3>1. Format & Impression</h3>
+            <div class="form-group">
+                <label for="product_type">Type de Produit</label>
+                <select id="product_type" onchange="onProductTypeChange(this.value); updateDimensionDisplay();">
+                    <option value="Carte de visite (85x54mm)">Carte de visite (85x54mm)</option>
+                    <option value="Flyer A5 (148x210mm)">Flyer A5 (148x210mm)</option>
+                    <option value="Flyer A6 (105x148mm)">Flyer A6 (105x148mm)</option>
+                    <option value="Dépliant 2 volets">Dépliant 2 volets</option>
+                    <option value="Marque-page (50x200mm)">Marque-page (50x200mm)</option>
+                    <option value="X-Banner (600x1600mm)">X-Banner (Grand Format)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="print_mode">Type d'impression</label>
+                <select id="print_mode" onchange="togglePrintMode()">
+                    <option value="recto_verso">Recto / Verso</option>
+                    <option value="recto">Recto seul</option>
+                </select>
+            </div>
+            <div id="print-mode-banner">ℹ️ Mode Recto seul : seule la face avant sera générée.</div>
+        </div>
+
+        <!-- ÉTAPE 2 -->
+        <div class="form-step" data-step="2" style="display:none;">
+            <h3>2. Coordonnées & Recto</h3>
+            <div class="form-group">
+                <label for="brand_name">Nom de l'entreprise</label>
+                <input type="text" id="brand_name" value="ElecPro Services"
+                    oninput="updateSvgTextLive('svg-brand-name', this.value)">
+            </div>
+            <div class="form-group">
+                <label for="contact_nom">Nom du contact <span class="optional-hint">optionnel</span></label>
+                <input type="text" id="contact_nom" value="" placeholder="ex : Dupont"
+                    oninput="updateContactNamePreview()">
+            </div>
+            <div class="form-group">
+                <label for="contact_prenom">Prénom du contact <span class="optional-hint">optionnel</span></label>
+                <input type="text" id="contact_prenom" value="" placeholder="ex : Jean"
+                    oninput="updateContactNamePreview()">
+            </div>
+            <div class="form-group">
+                <label for="business_type">Secteur / Activité</label>
+                <input type="text" id="business_type" value="Électricien bâtiment & dépannage">
+            </div>
+            <div class="form-group">
+                <label for="slogan">Slogan ou Accroche</label>
+                <input type="text" id="slogan" value="Dépannage 24/7 & Rénovation"
+                    oninput="updateSvgTextLive('svg-slogan', this.value)">
+            </div>
+            <div class="form-group">
+                <label for="phone">Téléphone <span class="optional-hint">optionnel</span></label>
+                <input type="text" id="phone" value="06 00 11 22 33"
+                    oninput="updateSvgTextLive('svg-phone', this.value)">
+            </div>
+            <div class="form-group">
+                <label for="email">E-mail <span class="optional-hint">optionnel</span></label>
+                <input type="email" id="email" value="contact@elecpro.fr"
+                    oninput="updateSvgTextLive('svg-email', this.value)">
+            </div>
+            <div class="form-group">
+                <label for="content_recto">Que doit afficher le RECTO ?</label>
+                <div class="content-hint">
+                    📝 Détails libres :<br>
+                    <span class="content-hint-tags">Activité · Adresse · Téléphone · Promo · Horaires</span>
+                </div>
+                <textarea id="content_recto" placeholder="ex : Coaching sportif · Paris 17e..."></textarea>
+            </div>
+        </div>
+
+        <!-- ÉTAPE 3 -->
+        <div class="form-step" data-step="3" style="display:none;">
+            <h3>3. Contenu du Verso</h3>
+            <div class="form-group" id="content-verso-group">
+                <label for="content_verso">Que doit afficher le VERSO ?</label>
+                <div class="content-hint">
+                    📝 Détails pour le dos de votre support :<br>
+                    <span class="content-hint-tags">Réseaux sociaux · Parrainage · Paiements · Infos</span>
+                </div>
+                <textarea id="content_verso" placeholder="ex : Suivez-nous @alysoncoach..."></textarea>
+            </div>
+        </div>
+
+        <!-- ÉTAPE 4 -->
+        <div class="form-step" data-step="4" style="display:none;">
+            <h3>4. Identité Visuelle</h3>
+            <div class="form-group">
+                <label for="logo_file">Logo (PNG, JPG, SVG)</label>
+                <input type="file" id="logo_file" accept="image/*" onchange="handleLogoUpload(event)">
+                <div id="logo-preview-container">
+                    <img id="logo-preview-img" src="" alt="Aperçu logo">
+                    <span style="font-size:0.75rem; color:var(--dark);">Logo chargé</span>
+                    <button type="button" class="btn-remove-logo" onclick="removeUploadedLogo()">Supprimer</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Style visuel souhaité</label>
+                <div class="style-chip-container" id="style-chip-container">
+                    <button type="button" class="style-chip active" onclick="selectStyleChip(this)"
+                        data-style="Style premium événementiel, ambiance sophistiquée et soignée">Premium</button>
+                    <button type="button" class="style-chip" onclick="selectStyleChip(this)"
+                        data-style="Style photo réaliste, mise en avant de photographies produits/services">Photo
+                        réaliste</button>
+                    <button type="button" class="style-chip" onclick="selectStyleChip(this)"
+                        data-style="Ambiance festive, colorée et dynamique">Festif</button>
+                    <button type="button" class="style-chip" onclick="selectStyleChip(this)"
+                        data-style="Design moderne et épuré, minimaliste">Moderne épuré</button>
+                    <button type="button" class="style-chip" onclick="selectStyleChip(this)"
+                        data-style="Style luxe, élégant, matières nobles">Luxe</button>
+                    <button type="button" class="style-chip" onclick="selectStyleChip(this)"
+                        data-style="Commercial impactant, orienté conversion et accroche forte">Commercial</button>
+                </div>
+                <input type="hidden" id="style_preference"
+                    value="Style premium événementiel, ambiance sophistiquée et soignée">
+            </div>
+
+            <div class="form-group">
+                <label>Couleurs de la marque (max 3)</label>
+                <div class="color-picker-row">
+                    <div class="color-picker-item">
+                        <input type="color" id="brand_color_1" value="#007bc0" onchange="updateColorLabel(1)">
+                        <span id="brand_color_1_label">#007bc0</span>
+                    </div>
+                    <div class="color-picker-item">
+                        <input type="color" id="brand_color_2" value="#595959" onchange="updateColorLabel(2)">
+                        <span id="brand_color_2_label">#595959</span>
+                    </div>
+                    <div class="color-picker-item">
+                        <input type="color" id="brand_color_3" value="#222222" onchange="updateColorLabel(3)">
+                        <span id="brand_color_3_label">#222222</span>
+                    </div>
+                </div>
+                <label class="checkbox-inline">
+                    <input type="checkbox" id="use_brand_colors" checked>
+                    Utiliser ces couleurs pour la génération IA
+                </label>
+            </div>
+        </div>
+
+        <!-- ÉTAPE 5 -->
+        <div class="form-step" data-step="5" style="display:none;">
+            <h3>5. Ambiance & PAO</h3>
+            <div class="form-group">
+                <label>Quel fond / ambiance ?</label>
+                <div class="style-chip-container" id="background-chip-container">
+                    <button type="button" class="style-chip active" data-bg="automatique"
+                        onclick="toggleBackgroundChip(this)">Automatique</button>
+                    <button type="button" class="style-chip" data-bg="photographique_realiste"
+                        onclick="toggleBackgroundChip(this)">Réaliste</button>
+                    <button type="button" class="style-chip" data-bg="couleur_unie_degrade"
+                        onclick="toggleBackgroundChip(this)">Dégradé / Uni</button>
+                    <button type="button" class="style-chip" data-bg="lumieres_neons"
+                        onclick="toggleBackgroundChip(this)">Néons</button>
+                    <button type="button" class="style-chip" data-bg="nature_exterieur"
+                        onclick="toggleBackgroundChip(this)">Nature</button>
+                    <button type="button" class="style-chip" data-bg="urbain_ville"
+                        onclick="toggleBackgroundChip(this)">Urbain</button>
+                    <button type="button" class="style-chip" data-bg="elegant_sombre"
+                        onclick="toggleBackgroundChip(this)">Sombre élégant</button>
+                    <button type="button" class="style-chip" data-bg="minimaliste"
+                        onclick="toggleBackgroundChip(this)">Minimaliste</button>
+                    <button type="button" class="style-chip" data-bg="from_images"
+                        onclick="toggleBackgroundChip(this)">Mes images</button>
+                </div>
+            </div>
+
+            <div class="form-group" id="background-images-group" style="display:none;">
+                <label for="background_images_file">Images d'inspiration</label>
+                <input type="file" id="background_images_file" accept="image/*" multiple
+                    onchange="handleBackgroundImagesUpload(event)">
+                <div id="background-images-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="extra_details">Détails & Consignes PAO (IA)</label>
+                <textarea id="extra_details" placeholder="ex: Icône d'éclair, style épuré..."></textarea>
+            </div>
+
+            <div id="palette-container">
+                <h3>🎨 Palette Générée</h3>
+                <div class="palette-swatches">
+                    <div id="swatch-primary" class="swatch">Prim.</div>
+                    <div id="swatch-secondary" class="swatch">Sec.</div>
+                    <div id="swatch-background" class="swatch">Fond</div>
+                    <div id="swatch-text" class="swatch">Texte</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="generation-progress">
+            <div class="progress-header">
+                <span class="progress-icon">✨</span>
+                <span>Création en cours...</span>
+                <span id="progress-timer">0s</span>
+            </div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progress-bar-fill"></div>
+            </div>
+        </div>
+
+        <!-- Boutons de navigation pas à pas & actions -->
+        <div class="btn-group">
+            <div style="display: flex; gap: 8px;" id="wizard-nav-buttons">
+                <button type="button" id="btn-prev" class="action-btn btn-secondary-action"
+                    style="flex: 1; display: none;" onclick="changeStep(-1)">⬅️ Précédent</button>
+                <button type="button" id="btn-next" class="action-btn btn-primary" style="flex: 1;"
+                    onclick="changeStep(1)">Suivant ➡️</button>
+            </div>
+            <button class="action-btn btn-primary" id="btn-generate" onclick="generateDesignFromAPI()"
+                style="display: none;">✨ Générer le Design IA</button>
+            <button class="action-btn btn-success" id="btn-export-pdf" onclick="exportPDFFromAPI()">📥 Télécharger le
+                PDF HD</button>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="overlay-info">🖱️ Glissez pour pivoter en 3D</div>
+
+        <div id="dimension-indicator">
+            Format : --
+            <div class="mode-line" id="mode-indicator">Mode : Recto / Verso</div>
+        </div>
+
+        <div id="canvas-container"></div>
+
+        <!-- Bouton d'entrée en mode édition manuelle -->
+        <button id="btn-edit-design" onclick="toggleEditMode()">✏️ Modifier le design</button>
+
+        <!-- Mode édition 2D (overlay par-dessus le rendu 3D) -->
+        <div id="edit-mode-overlay">
+            <div id="edit-hint">Cliquez un élément pour le sélectionner et le glisser. Utilisez les poignées pour redimensionner.</div>
+            <div class="edit-toolbar-fab">
+                <button onclick="addTextElement()">➕ Texte</button>
+                <button onclick="addShapeElement('rect')">➕ Rectangle</button>
+                <button onclick="addShapeElement('circle')">➕ Cercle</button>
+                <div class="toolbar-sep"></div>
+                <button class="danger" onclick="deleteSelectedElement()">🗑️ Supprimer</button>
+                <div class="toolbar-sep"></div>
+                <button onclick="exitEditMode(false)">✖️ Annuler</button>
+                <button class="primary-action" onclick="exitEditMode(true)">✅ Terminer</button>
+            </div>
+            <div id="edit-svg-host"></div>
+            <div id="edit-property-panel">
+                <div class="prop-field" id="prop-field-text">
+                    <label>Texte</label>
+                    <input type="text" id="prop-text" oninput="onPropChange('text', this.value)">
+                </div>
+                <div class="prop-field" id="prop-field-fontsize">
+                    <label>Taille police</label>
+                    <input type="number" id="prop-fontsize" min="6" max="400" oninput="onPropChange('fontsize', this.value)">
+                </div>
+                <div class="prop-field" id="prop-field-color">
+                    <label>Couleur</label>
+                    <input type="color" id="prop-color" oninput="onPropChange('color', this.value)">
+                </div>
+                <div class="prop-field" id="prop-field-width">
+                    <label>Largeur</label>
+                    <input type="number" id="prop-width" min="1" oninput="onPropChange('width', this.value)">
+                </div>
+                <div class="prop-field" id="prop-field-height">
+                    <label>Hauteur</label>
+                    <input type="number" id="prop-height" min="1" oninput="onPropChange('height', this.value)">
+                </div>
+                <div class="prop-field" id="prop-field-radius">
+                    <label>Rayon</label>
+                    <input type="number" id="prop-radius" min="1" oninput="onPropChange('radius', this.value)">
+                </div>
+            </div>
+        </div>
+
+        <div id="viewport-controls">
+            <div class="control-cluster" id="face-toggle-cluster">
+                <div class="face-toggle-floating">
+                    <button id="btn-face-front" class="face-btn-float active" onclick="setActiveFace('front')">🔲
+                        Recto</button>
+                    <button id="btn-face-back" class="face-btn-float" onclick="setActiveFace('back')">🔄 Verso</button>
+                </div>
+            </div>
+            <div class="control-cluster zoom-cluster">
+                <button class="control-btn" onclick="zoomIn()" title="Zoom +">+</button>
+                <button class="control-btn" onclick="zoomOut()" title="Zoom -">-</button>
+            </div>
+        </div>
+
+        <div id="debug-panel"></div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        let scene, camera, renderer, controls, cardMesh;
+        let cardMaterials = [];
+        let currentDimensions = { width: 85, height: 54, thickness: 1.2 };
+
+        let svgElements = { front: null, back: null };
+        let activeFace = 'front';
+        let targetRotationY = 0;
+        let uploadedLogoBase64 = null;
+        let selectedBackgroundOptions = ['automatique'];
+        let backgroundImagesBase64 = [];
+
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        function showDebug(message) {
+            const panel = document.getElementById('debug-panel');
+            panel.style.display = 'block';
+            panel.textContent = message;
+        }
+        function hideDebug() {
+            document.getElementById('debug-panel').style.display = 'none';
+        }
+
+        function getPrintMode() {
+            return document.getElementById('print_mode').value;
+        }
+
+        function updateStepView() {
+            const printMode = getPrintMode();
+            if (currentStep === 3 && printMode === 'recto') {
+                currentStep = (currentStep > 3) ? 2 : 4;
+            }
+
+            document.querySelectorAll('.form-step').forEach(stepEl => {
+                const stepNum = parseInt(stepEl.getAttribute('data-step'));
+                stepEl.style.display = (stepNum === currentStep) ? 'flex' : 'none';
+            });
+
+            document.getElementById('current-step-num').textContent = currentStep;
+            document.getElementById('btn-prev').style.display = (currentStep === 1) ? 'none' : 'block';
+
+            const isLastStep = (currentStep === totalSteps);
+            document.getElementById('btn-next').style.display = isLastStep ? 'none' : 'block';
+            document.getElementById('btn-generate').style.display = isLastStep ? 'block' : 'none';
+        }
+
+        function changeStep(direction) {
+            const printMode = getPrintMode();
+            currentStep += direction;
+
+            if (currentStep === 3 && printMode === 'recto') {
+                currentStep += direction;
+            }
+
+            if (currentStep < 1) currentStep = 1;
+            if (currentStep > totalSteps) currentStep = totalSteps;
+
+            updateStepView();
+        }
+
+        function toggleBackgroundChip(button) {
+            const value = button.dataset.bg;
+            const container = document.getElementById('background-chip-container');
+            const allChips = Array.from(container.querySelectorAll('.style-chip'));
+            const automatiqueChip = allChips.find(c => c.dataset.bg === 'automatique');
+
+            if (value === 'automatique') {
+                allChips.forEach(c => c.classList.remove('active'));
+                button.classList.add('active');
+                selectedBackgroundOptions = ['automatique'];
+            } else {
+                automatiqueChip.classList.remove('active');
+                button.classList.toggle('active');
+
+                selectedBackgroundOptions = allChips
+                    .filter(c => c.classList.contains('active') && c.dataset.bg !== 'automatique')
+                    .map(c => c.dataset.bg);
+
+                if (selectedBackgroundOptions.length === 0) {
+                    automatiqueChip.classList.add('active');
+                    selectedBackgroundOptions = ['automatique'];
+                }
+            }
+
+            const showImageUpload = selectedBackgroundOptions.includes('from_images');
+            document.getElementById('background-images-group').style.display = showImageUpload ? 'block' : 'none';
+            if (!showImageUpload) {
+                backgroundImagesBase64 = [];
+                document.getElementById('background_images_file').value = "";
+                document.getElementById('background-images-preview').innerHTML = "";
+            }
+        }
+
+        function handleBackgroundImagesUpload(event) {
+            const files = Array.from(event.target.files || []).slice(0, 3);
+            backgroundImagesBase64 = [];
+            const preview = document.getElementById('background-images-preview');
+            preview.innerHTML = "";
+
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    backgroundImagesBase64.push(e.target.result);
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    preview.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function selectStyleChip(button) {
+            document.querySelectorAll('#style-chip-container .style-chip').forEach(chip => chip.classList.remove('active'));
+            button.classList.add('active');
+            document.getElementById('style_preference').value = button.dataset.style;
+        }
+
+        function updateColorLabel(n) {
+            const input = document.getElementById(`brand_color_${n}`);
+            const label = document.getElementById(`brand_color_${n}_label`);
+            if (input && label) label.textContent = input.value;
+        }
+
+        function getSelectedBrandColors() {
+            if (!document.getElementById('use_brand_colors').checked) return [];
+            return [1, 2, 3]
+                .map(n => document.getElementById(`brand_color_${n}`).value)
+                .filter(Boolean);
+        }
+
+        function updateProductFormat(productType) {
+            updateDimensionDisplay();
+            const p = productType.toLowerCase();
+
+            if (p.includes("flyer a5")) {
+                currentDimensions = { width: 148, height: 210, thickness: 0.6 };
+            } else if (p.includes("flyer a6")) {
+                currentDimensions = { width: 105, height: 148, thickness: 0.6 };
+            } else if (p.includes("dépliant") || p.includes("depliant")) {
+                currentDimensions = { width: 200, height: 210, thickness: 0.8 };
+            } else if (p.includes("marque-page") || p.includes("bookmark")) {
+                currentDimensions = { width: 50, height: 200, thickness: 1.0 };
+            } else if (p.includes("xbanner") || p.includes("x-banner")) {
+                currentDimensions = { width: 60, height: 160, thickness: 0.8 };
+            } else {
+                currentDimensions = { width: 85, height: 54, thickness: 1.2 };
+            }
+
+            if (cardMesh) {
+                cardMesh.geometry.dispose();
+                cardMesh.geometry = new THREE.BoxGeometry(
+                    currentDimensions.width,
+                    currentDimensions.height,
+                    currentDimensions.thickness
+                );
+                const maxDim = Math.max(currentDimensions.width, currentDimensions.height);
+                camera.position.set(0, 0, maxDim * 2.1);
+                if (controls) controls.update();
+            }
+        }
+
+        function onProductTypeChange(value) {
+            updateProductFormat(value);
+            loadDefaultSVGs();
+            if (svgElements.front) updateCardTexture('front', svgElements.front.outerHTML);
+            if (svgElements.back) updateCardTexture('back', svgElements.back.outerHTML);
+        }
+
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 2000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(100, 150, 150);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            const geometry = new THREE.BoxGeometry(currentDimensions.width, currentDimensions.height, currentDimensions.thickness);
+            const edgeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8 });
+            const defaultFaceMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+
+            cardMaterials = [edgeMat, edgeMat, edgeMat, edgeMat, defaultFaceMat, defaultFaceMat];
+            cardMesh = new THREE.Mesh(geometry, cardMaterials);
+            cardMesh.castShadow = true;
+            scene.add(cardMesh);
+
+            updateProductFormat(document.getElementById('product_type').value);
+            togglePrintMode();
+            loadDefaultSVGs();
+            animate();
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            cardMesh.rotation.y += (targetRotationY - cardMesh.rotation.y) * 0.1;
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function setActiveFace(face) {
+            if (face === 'back' && getPrintMode() === 'recto') return;
+            activeFace = face;
+            document.getElementById('btn-face-front').classList.toggle('active', face === 'front');
+            document.getElementById('btn-face-back').classList.toggle('active', face === 'back');
+            targetRotationY = (face === 'front') ? 0 : Math.PI;
+        }
+
+        function updateCardTexture(face, svgString) {
+            if (!svgString) return;
+
+            const encodedSvg = encodeURIComponent(svgString);
+            const url = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
+            const img = new Image();
+
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const renderScale = 12;
+                canvas.width = Math.round(currentDimensions.width * renderScale);
+                canvas.height = Math.round(currentDimensions.height * renderScale);
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+                const materialIndex = (face === 'front') ? 4 : 5;
+                if (cardMaterials[materialIndex].map) cardMaterials[materialIndex].map.dispose();
+
+                cardMaterials[materialIndex] = new THREE.MeshStandardMaterial({
+                    map: texture,
+                    roughness: 0.35,
+                    metalness: 0.1
+                });
+
+                cardMesh.material = cardMaterials;
+                cardMesh.materialNeedsUpdate = true;
+                hideDebug();
+            };
+
+            img.onerror = () => {
+                showDebug(`⚠️ Le SVG "${face}" est invalide.`);
+            };
+
+            img.src = url;
+        }
+
+        function applyBlankBackFace() {
+            if (!cardMesh) return;
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            if (cardMaterials[5] && cardMaterials[5].map) cardMaterials[5].map.dispose();
+
+            cardMaterials[5] = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.6 });
+            cardMesh.material = cardMaterials;
+            cardMesh.materialNeedsUpdate = true;
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                uploadedLogoBase64 = e.target.result;
+                document.getElementById('logo-preview-img').src = uploadedLogoBase64;
+                document.getElementById('logo-preview-container').style.display = 'flex';
+                injectLogoInSvg('front', uploadedLogoBase64);
+                if (getPrintMode() === 'recto_verso') injectLogoInSvg('back', uploadedLogoBase64);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function injectLogoInSvg(face, base64Url) {
+            const el = svgElements[face];
+            if (!el) return;
+
+            let logoNode = el.querySelector('#svg-logo-img');
+            if (!logoNode) {
+                const oldLogoGroup = el.querySelector('#svg-logo');
+                if (oldLogoGroup) oldLogoGroup.remove();
+
+                logoNode = document.createElementNS("http://www.w3.org/2000/svg", "image");
+                logoNode.setAttribute('id', 'svg-logo-img');
+                logoNode.setAttribute('x', '80');
+                logoNode.setAttribute('y', '60');
+                logoNode.setAttribute('width', '90');
+                logoNode.setAttribute('height', '90');
+                logoNode.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                el.appendChild(logoNode);
+            }
+
+            logoNode.setAttributeNS("http://www.w3.org/1999/xlink", "href", base64Url);
+            logoNode.setAttribute("href", base64Url);
+            updateCardTexture(face, el.outerHTML);
+        }
+
+        function removeUploadedLogo() {
+            uploadedLogoBase64 = null;
+            document.getElementById('logo_file').value = "";
+            document.getElementById('logo-preview-container').style.display = 'none';
+
+            ['front', 'back'].forEach(face => {
+                if (svgElements[face]) {
+                    const logoNode = svgElements[face].querySelector('#svg-logo-img');
+                    if (logoNode) logoNode.remove();
+                    updateCardTexture(face, svgElements[face].outerHTML);
+                }
+            });
+        }
+
+        function measureTextWidth(text, fontSize, fontWeight = 'normal', fontFamily = 'sans-serif') {
+            const canvas = measureTextWidth._canvas || (measureTextWidth._canvas = document.createElement('canvas'));
+            const ctx = canvas.getContext('2d');
+            ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+            return ctx.measureText(text).width;
+        }
+
+        function updateContactNamePreview() {
+            const nom = document.getElementById('contact_nom').value.trim();
+            const prenom = document.getElementById('contact_prenom').value.trim();
+            const fullName = [prenom, nom].filter(Boolean).join(' ');
+
+            ['front', 'back'].forEach(face => {
+                const el = svgElements[face];
+                if (!el) return;
+
+                const container = el.querySelector('#svg-contact-name');
+                if (!container) return;
+
+                const fontSize = parseFloat(container.getAttribute('data-font-size') || '24');
+                const maxWidth = parseFloat(container.getAttribute('data-max-width') || '300');
+                const x = container.getAttribute('x');
+                const y = parseFloat(container.getAttribute('data-base-y') || container.getAttribute('y'));
+                const lineHeight = fontSize * 1.2;
+
+                while (container.firstChild) container.removeChild(container.firstChild);
+
+                if (!fullName) {
+                    updateCardTexture(face, el.outerHTML);
+                    return;
+                }
+
+                const fullWidth = measureTextWidth(fullName, fontSize);
+                const makeTspan = (text, dy) => {
+                    const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                    tspan.setAttribute('x', x);
+                    tspan.setAttribute('dy', dy);
+                    tspan.textContent = text;
+                    return tspan;
+                };
+
+                if (fullWidth <= maxWidth || !prenom || !nom) {
+                    container.setAttribute('y', y);
+                    container.appendChild(makeTspan(fullName, 0));
+                } else {
+                    container.setAttribute('y', y - lineHeight / 2);
+                    container.appendChild(makeTspan(nom, 0));
+                    container.appendChild(makeTspan(prenom, lineHeight));
+                }
+
+                updateCardTexture(face, el.outerHTML);
+            });
+        }
+
+        function updateSvgTextLive(elementId, newText) {
+            ['front', 'back'].forEach(face => {
+                const currentEl = svgElements[face];
+                if (currentEl) {
+                    const targetNodes = currentEl.querySelectorAll(`#${elementId}`);
+                    targetNodes.forEach(node => { node.textContent = newText; });
+                    if (targetNodes.length > 0) updateCardTexture(face, currentEl.outerHTML);
+                }
+            });
+        }
+
+        function renderColorPalette(palette) {
+            if (!palette) return;
+            const container = document.getElementById('palette-container');
+            const swatches = ['primary', 'secondary', 'background', 'text'];
+
+            swatches.forEach(key => {
+                const el = document.getElementById(`swatch-${key}`);
+                if (el && palette[key]) {
+                    el.style.backgroundColor = palette[key];
+                    el.innerText = palette[key];
+                }
+            });
+            container.style.display = 'flex';
+        }
+
+        let progressInterval = null;
+        const ESTIMATED_DURATION = 30;
+
+        function startGenerationProgress() {
+            const container = document.getElementById('generation-progress');
+            const timerEl = document.getElementById('progress-timer');
+            const fillEl = document.getElementById('progress-bar-fill');
+            const startTime = Date.now();
+
+            container.style.display = 'flex';
+            fillEl.style.width = '0%';
+
+            progressInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                timerEl.textContent = `${elapsed}s`;
+                const ratio = Math.min(elapsed / ESTIMATED_DURATION, 0.95);
+                fillEl.style.width = `${(ratio * 100).toFixed(1)}%`;
+            }, 250);
+        }
+
+        function stopGenerationProgress() {
+            clearInterval(progressInterval);
+            progressInterval = null;
+            const fillEl = document.getElementById('progress-bar-fill');
+            fillEl.style.width = '100%';
+            setTimeout(() => {
+                document.getElementById('generation-progress').style.display = 'none';
+            }, 300);
+        }
+
+        async function generateDesignFromAPI() {
+            startGenerationProgress();
+            hideDebug();
+
+            const productTypeSelected = document.getElementById('product_type').value;
+            const printMode = getPrintMode();
+            updateProductFormat(productTypeSelected);
+
+            const payload = {
+                product_type: productTypeSelected,
+                business_type: document.getElementById('business_type').value,
+                brand_name: document.getElementById('brand_name').value,
+                contact_nom: document.getElementById('contact_nom').value,
+                contact_prenom: document.getElementById('contact_prenom').value,
+                slogan: document.getElementById('slogan').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value,
+                logo_url: uploadedLogoBase64 || null,
+                style_preference: document.getElementById('style_preference').value,
+                content_recto: document.getElementById('content_recto').value,
+                content_verso: printMode === 'recto_verso' ? document.getElementById('content_verso').value : "",
+                extra_details: document.getElementById('extra_details').value,
+                background_style: selectedBackgroundOptions,
+                background_images: backgroundImagesBase64,
+                brand_colors: getSelectedBrandColors(),
+                print_mode: printMode
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/generate-design`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail ? JSON.stringify(errData.detail) : "Erreur serveur");
+                }
+
+                const data = await response.json();
+                const parser = new DOMParser();
+
+                if (data.svg_front) {
+                    const docFront = parser.parseFromString(data.svg_front, "image/svg+xml");
+                    svgElements.front = docFront.documentElement;
+                    updateCardTexture('front', svgElements.front.outerHTML);
+                }
+
+                if (printMode === 'recto_verso' && data.svg_back && data.svg_back.trim() !== "") {
+                    const docBack = parser.parseFromString(data.svg_back, "image/svg+xml");
+                    svgElements.back = docBack.documentElement;
+                    updateCardTexture('back', svgElements.back.outerHTML);
+                } else {
+                    svgElements.back = null;
+                    applyBlankBackFace();
+                }
+
+                if (data.color_palette) renderColorPalette(data.color_palette);
+
+            } catch (error) {
+                alert("Erreur FastAPI : " + error.message);
+            } finally {
+                stopGenerationProgress();
+            }
+        }
+
+        async function exportPDFFromAPI() {
+            const printMode = getPrintMode();
+            if (!svgElements.front) {
+                alert("Veuillez d'abord générer une maquette.");
+                return;
+            }
+            if (printMode === 'recto_verso' && !svgElements.back) {
+                alert("Le verso n'est pas généré.");
+                return;
+            }
+
+            try {
+                const exportPayload = {
+                    svg_front: svgElements.front.outerHTML,
+                    svg_back: (printMode === 'recto_verso' && svgElements.back) ? svgElements.back.outerHTML : ""
+                };
+
+                const response = await fetch(`${API_URL}/export-pdf`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(exportPayload)
+                });
+
+                if (!response.ok) throw new Error("Erreur PDF");
+
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = (printMode === 'recto_verso') ? "impression_recto_verso_hd.pdf" : "impression_recto_hd.pdf";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+
+            } catch (error) {
+                alert("Erreur PDF : " + error.message);
+            }
+        }
+
+        function buildDefaultFrontSVG(w, h, isPortrait, fontSizeTitle, fontSizeSub) {
+            const logoSize = Math.min(w, h) * (isPortrait ? 0.16 : 0.24);
+            const logoScale = logoSize / 50;
+            const logoX = (w - logoSize) / 2;
+            const logoY = isPortrait ? h * 0.08 : h * 0.14;
+
+            let decoR, decoCx, decoCy;
+            if (isPortrait) {
+                decoR = w * 0.48; decoCy = decoR * 0.62; decoCx = w * 0.5;
+            } else {
+                decoR = h * 0.95; decoCy = h * 0.42; decoCx = w * 0.5;
+            }
+
+            const titleY = isPortrait ? h * 0.55 : h * 0.62;
+            const subY = isPortrait ? h * 0.62 : h * 0.72;
+            const barY = isPortrait ? h * 0.68 : h * 0.8;
+            const barWidth = w * 0.18;
+            const barHeight = Math.max(h * 0.008, 3);
+
+            return `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+            <rect width="${w}" height="${h}" fill="#ffffff"/>
+            <circle cx="${decoCx}" cy="${decoCy}" r="${decoR}" fill="#007bc0" opacity="0.12"/>
+
+            <g id="svg-logo" transform="translate(${logoX}, ${logoY}) scale(${logoScale.toFixed(4)})">
+                <circle cx="25" cy="25" r="25" fill="#007bc0" />
+                <path d="M 25 10 L 15 30 L 25 30 L 20 40 L 35 22 L 25 22 Z" fill="#ffffff" />
+            </g>
+
+            <text id="svg-brand-name" x="${w * 0.5}" y="${titleY}" text-anchor="middle" font-family="sans-serif" font-size="${fontSizeTitle}" font-weight="bold" fill="#222222">ElecPro Services</text>
+            <text id="svg-slogan" x="${w * 0.5}" y="${subY}" text-anchor="middle" font-family="sans-serif" font-size="${fontSizeSub}" fill="#595959">Dépannage 24/7 &amp; Rénovation</text>
+            <text id="svg-contact-name" x="${w * 0.5}" y="${subY + h * 0.08}" data-base-y="${subY + h * 0.08}" data-font-size="${Math.round(fontSizeSub * 0.9)}" data-max-width="${w * 0.85}" text-anchor="middle" font-family="sans-serif" font-size="${Math.round(fontSizeSub * 0.9)}" fill="#222222"></text>
+            <rect x="${w * 0.5 - barWidth / 2}" y="${barY}" width="${barWidth}" height="${barHeight}" fill="#2aaf52"/>
+        </svg>`;
+        }
+
+        function buildDefaultBackSVG(w, h, fontSizeTitle, fontSizeSub) {
+            return `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+                    <rect width="${w}" height="${h}" fill="#f8fafc"/>
+                    <rect x="0" y="0" width="${w}" height="${h * 0.015}" fill="#007bc0"/>
+                    <text id="svg-brand-name" x="${w * 0.1}" y="${h * 0.15}" font-family="sans-serif" font-size="${fontSizeTitle * 0.8}" font-weight="bold" fill="#222222">ElecPro Services</text>
+                    <text id="svg-phone" x="${w * 0.1}" y="${h * 0.35}" font-family="sans-serif" font-size="${fontSizeSub}" fill="#222222">📞 06 00 11 22 33</text>
+                    <text id="svg-email" x="${w * 0.1}" y="${h * 0.45}" font-family="sans-serif" font-size="${fontSizeSub}" fill="#222222">✉️ contact@elecpro.fr</text>
+                    <text id="svg-slogan" x="${w * 0.1}" y="${h * 0.85}" font-family="sans-serif" font-size="${fontSizeSub * 0.9}" fill="#595959">Dépannage 24/7 &amp; Rénovation</text>
+                </svg>`;
+        }
+
+        function loadDefaultSVGs() {
+            const pType = document.getElementById('product_type').value;
+            updateProductFormat(pType);
+
+            const w = currentDimensions.width * 10;
+            const h = currentDimensions.height * 10;
+            const isPortrait = h > w;
+
+            const fontSizeTitle = isPortrait ? Math.round(w * 0.1) : Math.round(w * 0.06);
+            const fontSizeSub = isPortrait ? Math.round(w * 0.05) : Math.round(w * 0.03);
+
+            const parser = new DOMParser();
+            const defaultFront = buildDefaultFrontSVG(w, h, isPortrait, fontSizeTitle, fontSizeSub);
+            svgElements.front = parser.parseFromString(defaultFront, "image/svg+xml").documentElement;
+            updateCardTexture('front', svgElements.front.outerHTML);
+
+            updateContactNamePreview();
+
+            if (getPrintMode() === 'recto_verso') {
+                const defaultBack = buildDefaultBackSVG(w, h, fontSizeTitle, fontSizeSub);
+                svgElements.back = parser.parseFromString(defaultBack, "image/svg+xml").documentElement;
+                updateCardTexture('back', svgElements.back.outerHTML);
+            } else {
+                svgElements.back = null;
+                applyBlankBackFace();
+            }
+        }
+
+        function updateDimensionDisplay() {
+            const displayElement = document.getElementById('dimension-indicator');
+            const productTypeSelect = document.getElementById('product_type');
+            const selectedText = productTypeSelect.options[productTypeSelect.selectedIndex].text;
+
+            if (displayElement) {
+                const modeLine = document.getElementById('mode-indicator');
+                const modeLabel = getPrintMode() === 'recto_verso' ? 'Recto / Verso' : 'Recto seul';
+                displayElement.childNodes[0].nodeValue = `Format : ${selectedText}`;
+                if (modeLine) modeLine.textContent = `Mode : ${modeLabel}`;
+            }
+        }
+
+        function zoomIn() {
+            if (!camera) return;
+            camera.position.lerp(controls.target, 0.15);
+            controls.update();
+        }
+
+        function zoomOut() {
+            if (!camera) return;
+            const direction = camera.position.clone().sub(controls.target).normalize();
+            camera.position.addScaledVector(direction, 50);
+            controls.update();
+        }
+
+        function togglePrintMode() {
+            const mode = getPrintMode();
+            const banner = document.getElementById('print-mode-banner');
+            const contentVersoGroup = document.getElementById('content-verso-group');
+            const faceToggleCluster = document.getElementById('face-toggle-cluster');
+
+            if (contentVersoGroup) {
+                contentVersoGroup.style.display = (mode === 'recto') ? 'none' : 'flex';
+            }
+
+            if (mode === 'recto') {
+                if (banner) banner.style.display = 'block';
+                if (faceToggleCluster) faceToggleCluster.style.display = 'none';
+                activeFace = 'front';
+                targetRotationY = 0;
+                svgElements.back = null;
+                applyBlankBackFace();
+            } else {
+                if (banner) banner.style.display = 'none';
+                if (faceToggleCluster) faceToggleCluster.style.display = 'flex';
+
+                if (!svgElements.back && cardMesh) {
+                    const w = currentDimensions.width * 10;
+                    const h = currentDimensions.height * 10;
+                    const isPortrait = h > w;
+                    const fontSizeTitle = isPortrait ? Math.round(w * 0.1) : Math.round(w * 0.06);
+                    const fontSizeSub = isPortrait ? Math.round(w * 0.05) : Math.round(w * 0.03);
+
+                    const parser = new DOMParser();
+                    const defaultBack = buildDefaultBackSVG(w, h, fontSizeTitle, fontSizeSub);
+                    svgElements.back = parser.parseFromString(defaultBack, "image/svg+xml").documentElement;
+                    updateCardTexture('back', svgElements.back.outerHTML);
+                }
+            }
+
+            updateDimensionDisplay();
+            updateStepView();
+        }
+
+        /* =====================================================================
+           ÉDITEUR MANUEL 2D (overlay façon Canva par-dessus le rendu 3D)
+        ===================================================================== */
+        const SVG_NS = "http://www.w3.org/2000/svg";
+        let editModeActive = false;
+        let editSvgRoot = null;      // <svg> live en cours d'édition
+        let selectionLayer = null;   // <g> qui contient le cadre + poignées de sélection
+        let selectedEl = null;       // élément SVG actuellement sélectionné
+        let customElCounter = 0;
+
+        let dragState = null;   // { type: 'move'|'resize', el, handle, startX, startY, orig... }
+
+        function getEditableTag(el) {
+            return el && ['text', 'rect', 'circle', 'image'].includes(el.tagName) ? el.tagName : null;
+        }
+
+        function toggleEditMode() {
+            if (editModeActive) {
+                exitEditMode(true);
+            } else {
+                enterEditMode();
+            }
+        }
+
+        function enterEditMode() {
+            const source = svgElements[activeFace];
+            const w = currentDimensions.width * 10;
+            const h = currentDimensions.height * 10;
+
+            let workingSvg;
+            if (source) {
+                workingSvg = source.cloneNode(true);
+            } else {
+                workingSvg = document.createElementNS(SVG_NS, 'svg');
+                workingSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                const bg = document.createElementNS(SVG_NS, 'rect');
+                bg.setAttribute('width', w);
+                bg.setAttribute('height', h);
+                bg.setAttribute('fill', '#ffffff');
+                workingSvg.appendChild(bg);
+            }
+            workingSvg.removeAttribute('width');
+            workingSvg.removeAttribute('height');
+            editSvgRoot = workingSvg;
+
+            const host = document.getElementById('edit-svg-host');
+            host.innerHTML = '';
+            host.appendChild(editSvgRoot);
+
+            // Dimensionner le host à l'écran en conservant le ratio réel du support
+            const maxW = Math.min(window.innerWidth * 0.6, 900);
+            const maxH = Math.min(window.innerHeight * 0.65, 900);
+            const ratio = w / h;
+            let displayW = maxW;
+            let displayH = displayW / ratio;
+            if (displayH > maxH) {
+                displayH = maxH;
+                displayW = displayH * ratio;
+            }
+            host.style.width = `${displayW}px`;
+            host.style.height = `${displayH}px`;
+
+            // Calque de sélection (cadre + poignées), ajouté par-dessus le SVG cloné
+            selectionLayer = document.createElementNS(SVG_NS, 'g');
+            selectionLayer.setAttribute('id', 'selection-layer');
+            selectionLayer.style.display = 'none';
+            editSvgRoot.appendChild(selectionLayer);
+
+            attachEditableListeners();
+
+            // Clic sur le fond = désélection
+            editSvgRoot.addEventListener('pointerdown', (e) => {
+                if (e.target === editSvgRoot) deselectElement();
+            });
+
+            document.getElementById('edit-mode-overlay').classList.add('active');
+            document.getElementById('btn-edit-design').classList.add('active');
+            document.getElementById('btn-edit-design').textContent = '✏️ Édition en cours…';
+            if (controls) controls.enabled = false;
+            editModeActive = true;
+            deselectElement();
+        }
+
+        function exitEditMode(applyChanges) {
+            if (!editModeActive) return;
+
+            if (applyChanges && editSvgRoot) {
+                selectionLayer.remove();
+                const clean = editSvgRoot.cloneNode(true);
+                clean.setAttribute('width', currentDimensions.width * 10);
+                clean.setAttribute('height', currentDimensions.height * 10);
+                svgElements[activeFace] = clean;
+                updateCardTexture(activeFace, clean.outerHTML);
+            }
+
+            document.getElementById('edit-mode-overlay').classList.remove('active');
+            document.getElementById('btn-edit-design').classList.remove('active');
+            document.getElementById('btn-edit-design').textContent = '✏️ Modifier le design';
+            document.getElementById('edit-svg-host').innerHTML = '';
+            if (controls) controls.enabled = true;
+
+            editModeActive = false;
+            editSvgRoot = null;
+            selectionLayer = null;
+            selectedEl = null;
+        }
+
+        function attachEditableListeners() {
+            const editable = Array.from(editSvgRoot.querySelectorAll('text, rect, circle, image'))
+                .filter(el => el !== selectionLayer && el.parentNode !== selectionLayer);
+            editable.forEach(el => {
+                el.classList.add('editable-el');
+                el.style.userSelect = 'none';
+                el.addEventListener('pointerdown', onElementPointerDown);
+            });
+        }
+
+        function svgPointFromEvent(evt) {
+            const pt = editSvgRoot.createSVGPoint();
+            pt.x = evt.clientX;
+            pt.y = evt.clientY;
+            const ctm = editSvgRoot.getScreenCTM().inverse();
+            return pt.matrixTransform(ctm);
+        }
+
+        function onElementPointerDown(evt) {
+            if (evt.target.closest('#selection-layer')) return;
+            evt.stopPropagation();
+            const el = evt.currentTarget;
+            selectElement(el);
+
+            const startPt = svgPointFromEvent(evt);
+            const tag = el.tagName;
+            dragState = {
+                type: 'move',
+                el,
+                tag,
+                startX: startPt.x,
+                startY: startPt.y,
+                origX: tag === 'circle' ? parseFloat(el.getAttribute('cx') || 0) : parseFloat(el.getAttribute('x') || 0),
+                origY: tag === 'circle' ? parseFloat(el.getAttribute('cy') || 0) : parseFloat(el.getAttribute('y') || 0)
+            };
+            el.classList.add('dragging');
+            window.addEventListener('pointermove', onDragMove);
+            window.addEventListener('pointerup', onDragEnd);
+        }
+
+        function onDragMove(evt) {
+            if (!dragState) return;
+            const pt = svgPointFromEvent(evt);
+            const dx = pt.x - dragState.startX;
+            const dy = pt.y - dragState.startY;
+            const { el, tag } = dragState;
+
+            if (dragState.type === 'move') {
+                if (tag === 'circle') {
+                    el.setAttribute('cx', dragState.origX + dx);
+                    el.setAttribute('cy', dragState.origY + dy);
+                } else {
+                    el.setAttribute('x', dragState.origX + dx);
+                    el.setAttribute('y', dragState.origY + dy);
+                }
+            } else if (dragState.type === 'resize') {
+                if (tag === 'circle') {
+                    const newR = Math.max(4, dragState.origR + Math.max(dx, dy));
+                    el.setAttribute('r', newR);
+                } else if (tag === 'rect') {
+                    el.setAttribute('width', Math.max(4, dragState.origW + dx));
+                    el.setAttribute('height', Math.max(4, dragState.origH + dy));
+                } else if (tag === 'image') {
+                    el.setAttribute('width', Math.max(8, dragState.origW + dx));
+                    el.setAttribute('height', Math.max(8, dragState.origH + dy));
+                    syncPropertyPanel(el);
+                } else if (tag === 'text') {
+                    const scaleDelta = 1 + (dx / 200);
+                    const newSize = Math.max(6, dragState.origFontSize * scaleDelta);
+                    el.setAttribute('font-size', newSize.toFixed(1));
+                    syncPropertyPanel(el);
+                }
+            }
+            updateSelectionUI(el);
+        }
+
+        function onDragEnd() {
+            if (dragState && dragState.el) dragState.el.classList.remove('dragging');
+            dragState = null;
+            window.removeEventListener('pointermove', onDragMove);
+            window.removeEventListener('pointerup', onDragEnd);
+        }
+
+        function getBBoxSafe(el) {
+            try { return el.getBBox(); } catch (e) { return { x: 0, y: 0, width: 0, height: 0 }; }
+        }
+
+        function selectElement(el) {
+            selectedEl = el;
+            updateSelectionUI(el);
+            syncPropertyPanel(el);
+            document.getElementById('edit-property-panel').classList.add('visible');
+        }
+
+        function deselectElement() {
+            selectedEl = null;
+            if (selectionLayer) selectionLayer.style.display = 'none';
+            document.getElementById('edit-property-panel').classList.remove('visible');
+        }
+
+        function updateSelectionUI(el) {
+            if (!selectionLayer || !el) return;
+            while (selectionLayer.firstChild) selectionLayer.removeChild(selectionLayer.firstChild);
+
+            const bbox = getBBoxSafe(el);
+            const pad = 4;
+            const frame = document.createElementNS(SVG_NS, 'rect');
+            frame.setAttribute('x', bbox.x - pad);
+            frame.setAttribute('y', bbox.y - pad);
+            frame.setAttribute('width', bbox.width + pad * 2);
+            frame.setAttribute('height', bbox.height + pad * 2);
+            frame.setAttribute('fill', 'none');
+            frame.setAttribute('stroke', '#007bc0');
+            frame.setAttribute('stroke-width', '2');
+            frame.setAttribute('stroke-dasharray', '6 4');
+            frame.setAttribute('pointer-events', 'none');
+            selectionLayer.appendChild(frame);
+
+            if (['rect', 'circle', 'text', 'image'].includes(el.tagName)) {
+                const handleSize = Math.max(bbox.width, bbox.height, 40) * 0.04 + 6;
+                const handle = document.createElementNS(SVG_NS, 'circle');
+                handle.setAttribute('cx', bbox.x + bbox.width + pad);
+                handle.setAttribute('cy', bbox.y + bbox.height + pad);
+                handle.setAttribute('r', handleSize);
+                handle.setAttribute('class', 'selection-handle');
+                handle.addEventListener('pointerdown', (evt) => onResizeHandleDown(evt, el));
+                selectionLayer.appendChild(handle);
+            }
+
+            selectionLayer.style.display = 'block';
+            editSvgRoot.appendChild(selectionLayer); // toujours au-dessus
+        }
+
+        function onResizeHandleDown(evt, el) {
+            evt.stopPropagation();
+            const startPt = svgPointFromEvent(evt);
+            const tag = el.tagName;
+            dragState = {
+                type: 'resize',
+                el,
+                tag,
+                startX: startPt.x,
+                startY: startPt.y,
+                origW: (tag === 'rect' || tag === 'image') ? parseFloat(el.getAttribute('width') || 0) : 0,
+                origH: (tag === 'rect' || tag === 'image') ? parseFloat(el.getAttribute('height') || 0) : 0,
+                origR: tag === 'circle' ? parseFloat(el.getAttribute('r') || 0) : 0,
+                origFontSize: tag === 'text' ? parseFloat(el.getAttribute('font-size') || 16) : 0
+            };
+            window.addEventListener('pointermove', onDragMove);
+            window.addEventListener('pointerup', onDragEnd);
+        }
+
+        function syncPropertyPanel(el) {
+            const tag = el.tagName;
+            ['text', 'fontsize', 'color', 'width', 'height', 'radius'].forEach(f => {
+                document.getElementById(`prop-field-${f}`).style.display = 'none';
+            });
+
+            if (tag === 'text') {
+                document.getElementById('prop-field-text').style.display = 'flex';
+                document.getElementById('prop-field-fontsize').style.display = 'flex';
+                document.getElementById('prop-field-color').style.display = 'flex';
+                document.getElementById('prop-text').value = el.textContent || '';
+                document.getElementById('prop-fontsize').value = parseFloat(el.getAttribute('font-size') || 16);
+                document.getElementById('prop-color').value = rgbToHex(el.getAttribute('fill') || '#222222');
+            } else if (tag === 'rect') {
+                document.getElementById('prop-field-color').style.display = 'flex';
+                document.getElementById('prop-field-width').style.display = 'flex';
+                document.getElementById('prop-field-height').style.display = 'flex';
+                document.getElementById('prop-color').value = rgbToHex(el.getAttribute('fill') || '#007bc0');
+                document.getElementById('prop-width').value = Math.round(parseFloat(el.getAttribute('width') || 0));
+                document.getElementById('prop-height').value = Math.round(parseFloat(el.getAttribute('height') || 0));
+            } else if (tag === 'circle') {
+                document.getElementById('prop-field-color').style.display = 'flex';
+                document.getElementById('prop-field-radius').style.display = 'flex';
+                document.getElementById('prop-color').value = rgbToHex(el.getAttribute('fill') || '#007bc0');
+                document.getElementById('prop-radius').value = Math.round(parseFloat(el.getAttribute('r') || 0));
+            } else if (tag === 'image') {
+                document.getElementById('prop-field-width').style.display = 'flex';
+                document.getElementById('prop-field-height').style.display = 'flex';
+                document.getElementById('prop-width').value = Math.round(parseFloat(el.getAttribute('width') || 0));
+                document.getElementById('prop-height').value = Math.round(parseFloat(el.getAttribute('height') || 0));
+            }
+        }
+
+        function rgbToHex(color) {
+            if (!color || color.startsWith('#')) return color || '#000000';
+            const m = color.match(/\d+/g);
+            if (!m) return '#000000';
+            return '#' + m.slice(0, 3).map(n => parseInt(n).toString(16).padStart(2, '0')).join('');
+        }
+
+        function onPropChange(field, value) {
+            if (!selectedEl) return;
+            const el = selectedEl;
+            if (field === 'text') el.textContent = value;
+            if (field === 'fontsize') el.setAttribute('font-size', value);
+            if (field === 'color') el.setAttribute('fill', value);
+            if (field === 'width') el.setAttribute('width', value);
+            if (field === 'height') el.setAttribute('height', value);
+            if (field === 'radius') el.setAttribute('r', value);
+            updateSelectionUI(el);
+        }
+
+        function deleteSelectedElement() {
+            if (!selectedEl) return;
+            selectedEl.remove();
+            deselectElement();
+        }
+
+        function addTextElement() {
+            if (!editSvgRoot) return;
+            const w = currentDimensions.width * 10;
+            const h = currentDimensions.height * 10;
+            customElCounter++;
+            const el = document.createElementNS(SVG_NS, 'text');
+            el.setAttribute('id', `custom-text-${customElCounter}`);
+            el.setAttribute('x', w * 0.5 - 60);
+            el.setAttribute('y', h * 0.5);
+            el.setAttribute('font-family', 'sans-serif');
+            el.setAttribute('font-size', Math.round(w * 0.05));
+            el.setAttribute('fill', '#222222');
+            el.textContent = 'Nouveau texte';
+            editSvgRoot.appendChild(el);
+            el.classList.add('editable-el');
+            el.addEventListener('pointerdown', onElementPointerDown);
+            selectElement(el);
+        }
+
+        function addShapeElement(kind) {
+            if (!editSvgRoot) return;
+            const w = currentDimensions.width * 10;
+            const h = currentDimensions.height * 10;
+            customElCounter++;
+            let el;
+            if (kind === 'rect') {
+                el = document.createElementNS(SVG_NS, 'rect');
+                el.setAttribute('id', `custom-rect-${customElCounter}`);
+                el.setAttribute('x', w * 0.5 - 50);
+                el.setAttribute('y', h * 0.5 - 30);
+                el.setAttribute('width', 100);
+                el.setAttribute('height', 60);
+                el.setAttribute('fill', '#007bc0');
+            } else {
+                el = document.createElementNS(SVG_NS, 'circle');
+                el.setAttribute('id', `custom-circle-${customElCounter}`);
+                el.setAttribute('cx', w * 0.5);
+                el.setAttribute('cy', h * 0.5);
+                el.setAttribute('r', 40);
+                el.setAttribute('fill', '#8b7b65');
+            }
+            editSvgRoot.appendChild(el);
+            el.classList.add('editable-el');
+            el.addEventListener('pointerdown', onElementPointerDown);
+            selectElement(el);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateDimensionDisplay();
+            updateStepView();
+        });
+
+        window.onload = init3D;
+    </script>
+</body>
+
+</html>
